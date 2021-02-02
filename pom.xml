@@ -431,6 +431,24 @@
 
     <profiles>
         <profile>
+            <id>local</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <repositories>
+                <repository>
+                    <id>local</id>
+                    <url>http://localhost:8081/repository/maven-public/</url>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>local</id>
+                    <url>http://localhost:8081/repository/maven-public/</url>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+        <profile>
             <id>jdk8</id>
             <activation>
                 <jdk>[1.8,)</jdk>
