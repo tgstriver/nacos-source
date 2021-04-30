@@ -54,13 +54,13 @@ import static com.alibaba.nacos.naming.misc.UtilsAndCommons.RAFT_CACHE_FILE_SUFF
  */
 @Component
 public class RaftStore {
-    
+
     private final Properties meta = new Properties();
-    
+
     private static final String META_FILE_NAME = DATA_BASE_DIR + File.separator + "meta.properties";
-    
+
     private static final String CACHE_DIR = DATA_BASE_DIR + File.separator + "data";
-    
+
     /**
      * Load datum from cache file.
      *
@@ -69,8 +69,8 @@ public class RaftStore {
      * @throws Exception any exception during load
      */
     public synchronized void loadDatums(RaftCore.Notifier notifier, ConcurrentMap<String, Datum> datums)
-            throws Exception {
-        
+        throws Exception {
+
         Datum datum;
         long start = System.currentTimeMillis();
         for (File cache : listCaches()) {
@@ -89,11 +89,11 @@ public class RaftStore {
                 datums.put(datum.key, datum);
             }
         }
-        
+
         Loggers.RAFT.info("finish loading all datums, size: {} cost {} ms.", datums.size(),
-                (System.currentTimeMillis() - start));
+            (System.currentTimeMillis() - start));
     }
-    
+
     /**
      * Load Metadata from cache file.
      *
@@ -105,13 +105,13 @@ public class RaftStore {
         if (!metaFile.exists() && !metaFile.getParentFile().mkdirs() && !metaFile.createNewFile()) {
             throw new IllegalStateException("failed to create meta file: " + metaFile.getAbsolutePath());
         }
-        
+
         try (FileInputStream inStream = new FileInputStream(metaFile)) {
             meta.load(inStream);
         }
         return meta;
     }
-    
+
     /**
      * Load datum from cache file by key.
      *
@@ -126,23 +126,23 @@ public class RaftStore {
             if (!cache.isFile()) {
                 Loggers.RAFT.warn("warning: encountered directory in cache dir: {}", cache.getAbsolutePath());
             }
-            
+
             if (!StringUtils.equals(cache.getName(), encodeDatumKey(key)) && !StringUtils
-                    .equals(cache.getName(), encodeDatumKey(key) + RAFT_CACHE_FILE_SUFFIX)) {
+                .equals(cache.getName(), encodeDatumKey(key) + RAFT_CACHE_FILE_SUFFIX)) {
                 continue;
             }
-            
+
             Loggers.RAFT.info("finish loading datum, key: {} cost {} ms.", key, (System.currentTimeMillis() - start));
             return readDatum(cache, StringUtils.EMPTY);
         }
-        
+
         return null;
     }
-    
+
     private boolean isDatumCacheFile(String fileName) {
         return fileName.endsWith(RAFT_CACHE_FILE_SUFFIX) || fileName.startsWith(RAFT_CACHE_FILE_PREFIX);
     }
-    
+
     private synchronized Datum readDatum(File file, String namespaceId) throws IOException {
         if (!isDatumCacheFile(file.getName())) {
             return null;
@@ -151,50 +151,50 @@ public class RaftStore {
         try (FileChannel fc = new FileInputStream(file).getChannel()) {
             buffer = ByteBuffer.allocate((int) file.length());
             fc.read(buffer);
-            
+
             String json = new String(buffer.array(), StandardCharsets.UTF_8);
             if (StringUtils.isBlank(json)) {
                 return null;
             }
-            
+
             final String fileName = file.getName();
-            
+
             if (KeyBuilder.matchSwitchKey(fileName)) {
                 return JacksonUtils.toObj(json, new TypeReference<Datum<SwitchDomain>>() {
                 });
             }
-            
+
             if (KeyBuilder.matchServiceMetaKey(fileName)) {
-                
+
                 Datum<Service> serviceDatum;
-                
+
                 try {
                     serviceDatum = JacksonUtils.toObj(json.replace("\\", ""), new TypeReference<Datum<Service>>() {
                     });
                 } catch (Exception e) {
                     JsonNode jsonObject = JacksonUtils.toObj(json);
-                    
+
                     serviceDatum = new Datum<>();
                     serviceDatum.timestamp.set(jsonObject.get("timestamp").asLong());
                     serviceDatum.key = jsonObject.get("key").asText();
                     serviceDatum.value = JacksonUtils.toObj(jsonObject.get("value").toString(), Service.class);
                 }
-                
+
                 if (StringUtils.isBlank(serviceDatum.value.getGroupName())) {
                     serviceDatum.value.setGroupName(Constants.DEFAULT_GROUP);
                 }
                 if (!serviceDatum.value.getName().contains(Constants.SERVICE_INFO_SPLITER)) {
                     serviceDatum.value.setName(
-                            Constants.DEFAULT_GROUP + Constants.SERVICE_INFO_SPLITER + serviceDatum.value.getName());
+                        Constants.DEFAULT_GROUP + Constants.SERVICE_INFO_SPLITER + serviceDatum.value.getName());
                 }
-                
+
                 return serviceDatum;
             }
-            
+
             if (KeyBuilder.matchInstanceListKey(fileName)) {
-                
+
                 Datum<Instances> instancesDatum;
-                
+
                 try {
                     instancesDatum = JacksonUtils.toObj(json, new TypeReference<Datum<Instances>>() {
                     });
@@ -202,35 +202,35 @@ public class RaftStore {
                     JsonNode jsonObject = JacksonUtils.toObj(json);
                     instancesDatum = new Datum<>();
                     instancesDatum.timestamp.set(jsonObject.get("timestamp").asLong());
-                    
+
                     String key = jsonObject.get("key").asText();
                     String serviceName = KeyBuilder.getServiceName(key);
                     key = key.substring(0, key.indexOf(serviceName)) + Constants.DEFAULT_GROUP
-                            + Constants.SERVICE_INFO_SPLITER + serviceName;
-                    
+                        + Constants.SERVICE_INFO_SPLITER + serviceName;
+
                     instancesDatum.key = key;
                     instancesDatum.value = new Instances();
                     instancesDatum.value.setInstanceList(
-                            JacksonUtils.toObj(jsonObject.get("value").toString(), new TypeReference<List<Instance>>() {
-                            }));
+                        JacksonUtils.toObj(jsonObject.get("value").toString(), new TypeReference<List<Instance>>() {
+                        }));
                     if (!instancesDatum.value.getInstanceList().isEmpty()) {
                         for (Instance instance : instancesDatum.value.getInstanceList()) {
                             instance.setEphemeral(false);
                         }
                     }
                 }
-                
+
                 return instancesDatum;
             }
-            
+
             return JacksonUtils.toObj(json, Datum.class);
-            
+
         } catch (Exception e) {
             Loggers.RAFT.warn("waning: failed to deserialize key: {}", file.getName());
             throw e;
         }
     }
-    
+
     private String cacheFileName(String namespaceId, Datum datum) {
         String fileName;
         if (StringUtils.isNotBlank(namespaceId)) {
@@ -240,7 +240,7 @@ public class RaftStore {
         }
         return fileName;
     }
-    
+
     private File cacheFile(String cacheFileName) {
         File cacheFile = new File(cacheFileName);
         if (cacheFile.exists()) {
@@ -248,7 +248,7 @@ public class RaftStore {
         }
         return new File(cacheFileName + RAFT_CACHE_FILE_SUFFIX);
     }
-    
+
     /**
      * Write datum to cache file.
      *
@@ -256,22 +256,22 @@ public class RaftStore {
      * @throws Exception any exception during writing
      */
     public synchronized void write(final Datum datum) throws Exception {
-        
+
         String namespaceId = KeyBuilder.getNamespace(datum.key);
-        
+
         File cacheFile = cacheFile(cacheFileName(namespaceId, datum));
-        
+
         if (!cacheFile.exists() && !cacheFile.getParentFile().mkdirs() && !cacheFile.createNewFile()) {
             MetricsMonitor.getDiskException().increment();
-            
+
             throw new IllegalStateException("can not make cache file: " + cacheFile.getName());
         }
-        
+
         FileChannel fc = null;
         ByteBuffer data;
-        
+
         data = ByteBuffer.wrap(JacksonUtils.toJson(datum).getBytes(StandardCharsets.UTF_8));
-        
+
         try {
             fc = new FileOutputStream(cacheFile, false).getChannel();
             fc.write(data, data.position());
@@ -284,44 +284,44 @@ public class RaftStore {
                 fc.close();
             }
         }
-        
+
         // remove old format file:
         if (StringUtils.isNoneBlank(namespaceId)) {
             if (datum.key.contains(Constants.DEFAULT_GROUP + Constants.SERVICE_INFO_SPLITER)) {
                 String oldFormatKey = datum.key
-                        .replace(Constants.DEFAULT_GROUP + Constants.SERVICE_INFO_SPLITER, StringUtils.EMPTY);
-                
+                    .replace(Constants.DEFAULT_GROUP + Constants.SERVICE_INFO_SPLITER, StringUtils.EMPTY);
+
                 cacheFile = cacheFile(cacheFileName(namespaceId, datum));
                 if (cacheFile.exists() && !cacheFile.delete()) {
                     Loggers.RAFT.error("[RAFT-DELETE] failed to delete old format datum: {}, value: {}", datum.key,
-                            datum.value);
+                        datum.value);
                     throw new IllegalStateException("failed to delete old format datum: " + datum.key);
                 }
             }
         }
     }
-    
+
     private File[] listCaches() throws Exception {
         File cacheDir = new File(CACHE_DIR);
         if (!cacheDir.exists() && !cacheDir.mkdirs()) {
             throw new IllegalStateException("cloud not make out directory: " + cacheDir.getName());
         }
-        
+
         return cacheDir.listFiles();
     }
-    
+
     /**
      * Delete datum from cache file.
      *
      * @param datum datum
      */
     public void delete(Datum datum) {
-        
+
         // datum key contains namespace info:
         String namespaceId = KeyBuilder.getNamespace(datum.key);
-        
+
         if (StringUtils.isNotBlank(namespaceId)) {
-            
+
             File cacheFile = new File(cacheFileName(namespaceId, datum));
             if (cacheFile.exists() && !cacheFile.delete()) {
                 Loggers.RAFT.error("[RAFT-DELETE] failed to delete datum: {}, value: {}", datum.key, datum.value);
@@ -329,7 +329,7 @@ public class RaftStore {
             }
         }
     }
-    
+
     /**
      * Update term Metadata.
      *
@@ -341,18 +341,18 @@ public class RaftStore {
         if (!file.exists() && !file.getParentFile().mkdirs() && !file.createNewFile()) {
             throw new IllegalStateException("failed to create meta file");
         }
-        
+
         try (FileOutputStream outStream = new FileOutputStream(file)) {
             // write meta
             meta.setProperty("term", String.valueOf(term));
             meta.store(outStream, null);
         }
     }
-    
+
     private static String encodeDatumKey(String datumKey) {
         return datumKey.replace(':', '#');
     }
-    
+
     private static String decodeDatumKey(String datumKey) {
         return datumKey.replace("#", ":");
     }
