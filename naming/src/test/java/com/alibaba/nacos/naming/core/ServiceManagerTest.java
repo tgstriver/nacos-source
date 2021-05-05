@@ -60,28 +60,28 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class ServiceManagerTest extends BaseTest {
-    
+
     private ServiceManager serviceManager;
-    
+
     @Mock
     private ConsistencyService consistencyService;
-    
+
     @Mock
     private Synchronizer synchronizer;
-    
+
     @Mock
     private ServerMemberManager serverMemberManager;
-    
+
     private Service service;
-    
+
     private Cluster cluster;
-    
+
     private Instance instance;
-    
+
     private Instance instance2;
-    
+
     private List<String> serviceNames;
-    
+
     @Before
     public void before() {
         super.before();
@@ -95,16 +95,16 @@ public class ServiceManagerTest extends BaseTest {
         mockInstance();
         mockServiceName();
     }
-    
+
     private void mockService() {
         service = new Service(TEST_SERVICE_NAME);
         service.setNamespaceId(TEST_NAMESPACE);
     }
-    
+
     private void mockCluster() {
         cluster = new Cluster(TEST_CLUSTER_NAME, service);
     }
-    
+
     private void mockInstance() {
         instance = new Instance("1.1.1.1", 1, TEST_CLUSTER_NAME);
         Map<String, String> metadata = new HashMap<>();
@@ -112,14 +112,14 @@ public class ServiceManagerTest extends BaseTest {
         instance.setMetadata(metadata);
         instance2 = new Instance("2.2.2.2", 2);
     }
-    
+
     private void mockServiceName() {
         serviceNames = new ArrayList<>(5);
         for (int i = 0; i < 32; i++) {
             serviceNames.add(String.valueOf(i));
         }
     }
-    
+
     @Test
     public void testGetAllNamespaces() throws NacosException {
         assertTrue(serviceManager.getAllNamespaces().isEmpty());
@@ -128,7 +128,7 @@ public class ServiceManagerTest extends BaseTest {
         assertEquals(1, serviceManager.getAllNamespaces().size());
         assertEquals(TEST_NAMESPACE, serviceManager.getAllNamespaces().iterator().next());
     }
-    
+
     @Test
     public void testGetAllServiceNames() throws NacosException {
         assertTrue(serviceManager.getAllServiceNames().isEmpty());
@@ -138,7 +138,7 @@ public class ServiceManagerTest extends BaseTest {
         assertEquals(1, serviceManager.getAllServiceNames(TEST_NAMESPACE).size());
         assertEquals(TEST_SERVICE_NAME, serviceManager.getAllServiceNames(TEST_NAMESPACE).iterator().next());
     }
-    
+
     @Test
     public void testGetAllServiceNamesOrder() throws NacosException {
         assertTrue(serviceManager.getAllServiceNames().isEmpty());
@@ -157,7 +157,7 @@ public class ServiceManagerTest extends BaseTest {
             index++;
         }
     }
-    
+
     @Test
     public void testGetAllServiceNameList() throws NacosException {
         assertTrue(serviceManager.getAllServiceNameList(TEST_NAMESPACE).isEmpty());
@@ -166,7 +166,7 @@ public class ServiceManagerTest extends BaseTest {
         assertEquals(1, serviceManager.getAllServiceNameList(TEST_NAMESPACE).size());
         assertEquals(TEST_SERVICE_NAME, serviceManager.getAllServiceNameList(TEST_NAMESPACE).get(0));
     }
-    
+
     @Test
     public void testGetAllServiceNameListOrder() throws NacosException {
         assertTrue(serviceManager.getAllServiceNameList(TEST_NAMESPACE).isEmpty());
@@ -181,7 +181,7 @@ public class ServiceManagerTest extends BaseTest {
             assertEquals(allServiceNameList.get(i), serviceNames.get(i));
         }
     }
-    
+
     @Test
     public void testGetResponsibleServices() throws NacosException {
         when(distroMapper.responsible(TEST_SERVICE_NAME)).thenReturn(true);
@@ -191,7 +191,7 @@ public class ServiceManagerTest extends BaseTest {
         assertEquals(TEST_SERVICE_NAME,
                 serviceManager.getResponsibleServices().get(TEST_NAMESPACE).iterator().next().getName());
     }
-    
+
     @Test
     public void getResponsibleInstanceCount() throws NacosException {
         when(distroMapper.responsible(TEST_SERVICE_NAME)).thenReturn(true);
@@ -202,7 +202,7 @@ public class ServiceManagerTest extends BaseTest {
         ((Set<Instance>) ReflectionTestUtils.getField(cluster, "ephemeralInstances")).add(instance);
         assertEquals(1, serviceManager.getResponsibleInstanceCount());
     }
-    
+
     @Test
     public void testCreateEmptyServiceForEphemeral() throws NacosException {
         assertFalse(serviceManager.containService(TEST_NAMESPACE, TEST_SERVICE_NAME));
@@ -218,7 +218,7 @@ public class ServiceManagerTest extends BaseTest {
         verify(consistencyService, never())
                 .put(eq(KeyBuilder.buildServiceMetaKey(TEST_NAMESPACE, TEST_SERVICE_NAME)), any(Service.class));
     }
-    
+
     @Test
     public void testCreateEmptyServiceForPersistent() throws NacosException {
         assertFalse(serviceManager.containService(TEST_NAMESPACE, TEST_SERVICE_NAME));
@@ -234,21 +234,21 @@ public class ServiceManagerTest extends BaseTest {
         verify(consistencyService)
                 .put(eq(KeyBuilder.buildServiceMetaKey(TEST_NAMESPACE, TEST_SERVICE_NAME)), any(Service.class));
     }
-    
+
     @Test
     public void testEasyRemoveServiceSuccessfully() throws Exception {
         serviceManager.createEmptyService(TEST_NAMESPACE, TEST_SERVICE_NAME, true);
         serviceManager.easyRemoveService(TEST_NAMESPACE, TEST_SERVICE_NAME);
         verify(consistencyService).remove(KeyBuilder.buildServiceMetaKey(TEST_NAMESPACE, TEST_SERVICE_NAME));
     }
-    
+
     @Test
     public void testEasyRemoveServiceFailed() throws Exception {
         expectedException.expect(IllegalArgumentException.class);
         expectedException.expectMessage("specified service not exist, serviceName : " + TEST_SERVICE_NAME);
         serviceManager.easyRemoveService(TEST_NAMESPACE, TEST_SERVICE_NAME);
     }
-    
+
     @Test
     public void testRegisterInstance() throws NacosException {
         assertEquals(0, serviceManager.getInstanceCount());
@@ -256,7 +256,7 @@ public class ServiceManagerTest extends BaseTest {
         String instanceListKey = KeyBuilder.buildInstanceListKey(TEST_NAMESPACE, TEST_SERVICE_NAME, true);
         verify(consistencyService).put(eq(instanceListKey), any(Instances.class));
     }
-    
+
     @Test
     public void testUpdateInstance() throws NacosException {
         serviceManager.createEmptyService(TEST_NAMESPACE, TEST_SERVICE_NAME, true);
@@ -267,12 +267,12 @@ public class ServiceManagerTest extends BaseTest {
         String instanceListKey = KeyBuilder.buildInstanceListKey(TEST_NAMESPACE, TEST_SERVICE_NAME, true);
         verify(consistencyService).put(eq(instanceListKey), any(Instances.class));
     }
-    
+
     @Test
     public void testUpdateMetadata() throws NacosException {
-        
+
         serviceManager.createEmptyService(TEST_NAMESPACE, TEST_SERVICE_NAME, true);
-        
+
         List<Instance> instanceList = new LinkedList<>();
         Datum datam = new Datum();
         datam.key = KeyBuilder.buildInstanceListKey(TEST_NAMESPACE, TEST_SERVICE_NAME, true);
@@ -283,34 +283,34 @@ public class ServiceManagerTest extends BaseTest {
         datam.value = instances;
         when(consistencyService.get(KeyBuilder.buildInstanceListKey(TEST_NAMESPACE, TEST_SERVICE_NAME, true)))
                 .thenReturn(datam);
-        
+
         Instance updateMetadataInstance = new Instance();
         updateMetadataInstance.setIp(instance.getIp());
         updateMetadataInstance.setPort(instance.getPort());
         updateMetadataInstance.setClusterName(cluster.getName());
         updateMetadataInstance.setEphemeral(instance.isEphemeral());
-        
+
         Map<String, String> updateMetadata = new HashMap<>(16);
         updateMetadata.put("key1", "new-value1");
         updateMetadata.put("key2", "value2");
         updateMetadataInstance.setMetadata(updateMetadata);
-        
+
         //all=false, update input instances
         serviceManager
                 .updateMetadata(TEST_NAMESPACE, TEST_SERVICE_NAME, true, UPDATE_INSTANCE_METADATA_ACTION_UPDATE, false,
                         Lists.newArrayList(updateMetadataInstance), updateMetadata);
-        
+
         assertEquals(instance.getMetadata().get("key1"), "new-value1");
         assertEquals(instance.getMetadata().get("key2"), "value2");
-        
+
         //all=true, update all instances
         serviceManager
                 .updateMetadata(TEST_NAMESPACE, TEST_SERVICE_NAME, true, UPDATE_INSTANCE_METADATA_ACTION_UPDATE, true,
                         null, updateMetadata);
-        
+
         assertEquals(instance2.getMetadata().get("key1"), "new-value1");
         assertEquals(instance2.getMetadata().get("key2"), "value2");
-        
+
         Instance deleteMetadataInstance = new Instance();
         deleteMetadataInstance.setIp(instance.getIp());
         deleteMetadataInstance.setPort(instance.getPort());
@@ -320,24 +320,24 @@ public class ServiceManagerTest extends BaseTest {
         deleteMetadata.put("key2", null);
         deleteMetadata.put("key3", null);
         updateMetadataInstance.setMetadata(deleteMetadata);
-        
+
         serviceManager
                 .updateMetadata(TEST_NAMESPACE, TEST_SERVICE_NAME, true, UPDATE_INSTANCE_METADATA_ACTION_REMOVE, false,
                         Lists.newArrayList(deleteMetadataInstance), deleteMetadata);
-        
+
         assertEquals(instance.getMetadata().get("key1"), "new-value1");
         assertNull(instance.getMetadata().get("key2"));
         assertNull(instance.getMetadata().get("key3"));
-        
+
         serviceManager
                 .updateMetadata(TEST_NAMESPACE, TEST_SERVICE_NAME, true, UPDATE_INSTANCE_METADATA_ACTION_REMOVE, true,
                         null, deleteMetadata);
-        
+
         assertEquals(instance2.getMetadata().get("key1"), "new-value1");
         assertNull(instance2.getMetadata().get("key2"));
         assertNull(instance2.getMetadata().get("key3"));
     }
-    
+
     @Test
     public void testRemoveInstance() throws NacosException {
         serviceManager.createEmptyService(TEST_NAMESPACE, TEST_SERVICE_NAME, true);
@@ -345,7 +345,7 @@ public class ServiceManagerTest extends BaseTest {
         String instanceListKey = KeyBuilder.buildInstanceListKey(TEST_NAMESPACE, TEST_SERVICE_NAME, true);
         verify(consistencyService).put(eq(instanceListKey), any(Instances.class));
     }
-    
+
     @Test
     public void testGetInstance() throws NacosException {
         assertNull(serviceManager.getInstance(TEST_NAMESPACE, TEST_SERVICE_NAME, TEST_CLUSTER_NAME, "1.1.1.1", 1));
@@ -358,7 +358,7 @@ public class ServiceManagerTest extends BaseTest {
                 serviceManager.getInstance(TEST_NAMESPACE, TEST_SERVICE_NAME, TEST_CLUSTER_NAME, "1.1.1.1", 1));
         assertNull(serviceManager.getInstance(TEST_NAMESPACE, TEST_SERVICE_NAME, TEST_CLUSTER_NAME, "2.2.2.2", 2));
     }
-    
+
     @Test
     public void testUpdateIpAddresses() throws Exception {
         List<Instance> instanceList = serviceManager
@@ -368,7 +368,7 @@ public class ServiceManagerTest extends BaseTest {
         Assert.assertEquals(1, service.getClusterMap().size());
         Assert.assertEquals(new Cluster(instance.getClusterName(), service),
                 service.getClusterMap().get(TEST_CLUSTER_NAME));
-        
+
         Datum datam = new Datum();
         datam.key = KeyBuilder.buildInstanceListKey(TEST_NAMESPACE, TEST_SERVICE_NAME, true);
         Instances instances = new Instances();
@@ -386,7 +386,7 @@ public class ServiceManagerTest extends BaseTest {
         Assert.assertEquals(new Cluster(instance.getClusterName(), service),
                 service.getClusterMap().get(TEST_CLUSTER_NAME));
     }
-    
+
     @Test
     public void testUpdateIpAddressesNoInstance() throws Exception {
         expectedException.expect(IllegalArgumentException.class);
@@ -394,7 +394,7 @@ public class ServiceManagerTest extends BaseTest {
                 .expectMessage(String.format("ip list can not be empty, service: %s, ip list: []", TEST_SERVICE_NAME));
         serviceManager.updateIpAddresses(service, UtilsAndCommons.UPDATE_INSTANCE_ACTION_ADD, true);
     }
-    
+
     @Test
     public void testSearchServices() throws NacosException {
         serviceManager.createEmptyService(TEST_NAMESPACE, TEST_SERVICE_NAME, true);
@@ -403,7 +403,7 @@ public class ServiceManagerTest extends BaseTest {
         assertEquals(1, actual.size());
         assertEquals(TEST_SERVICE_NAME, actual.get(0).getName());
     }
-    
+
     @Test
     public void testGetPagedService() throws NacosException {
         serviceManager.createEmptyService(TEST_NAMESPACE, TEST_SERVICE_NAME, true);
@@ -416,26 +416,25 @@ public class ServiceManagerTest extends BaseTest {
         assertEquals(1, actualSize);
         assertEquals(TEST_SERVICE_NAME, actualServices.get(0).getName());
     }
-    
+
     @Test
     public void testSnowflakeInstanceId() throws Exception {
         Map<String, String> metaData = Maps.newHashMap();
         metaData.put(PreservedMetadataKeys.INSTANCE_ID_GENERATOR, Constants.SNOWFLAKE_INSTANCE_ID_GENERATOR);
-        
+
         instance.setMetadata(metaData);
-        
+
         instance2.setClusterName(TEST_CLUSTER_NAME);
         instance2.setMetadata(metaData);
-        
-        List<Instance> instanceList = serviceManager
-                .updateIpAddresses(service, UtilsAndCommons.UPDATE_INSTANCE_ACTION_ADD, true, instance, instance2);
+
+        List<Instance> instanceList = serviceManager.updateIpAddresses(service, UtilsAndCommons.UPDATE_INSTANCE_ACTION_ADD, true, instance, instance2);
         Assert.assertNotNull(instanceList);
         Assert.assertEquals(2, instanceList.size());
         int instanceId1 = Integer.parseInt(instance.getInstanceId());
         int instanceId2 = Integer.parseInt(instance2.getInstanceId());
         Assert.assertNotEquals(instanceId1, instanceId2);
     }
-    
+
     @Test
     public void testUpdatedHealthStatus() {
         String namespaceId = "namespaceId";
@@ -448,7 +447,7 @@ public class ServiceManagerTest extends BaseTest {
                 .thenReturn(message);
         serviceManager.updatedHealthStatus(namespaceId, serviceName, serverIp);
     }
-    
+
     @Test
     public void testSerializeServiceChecksum() {
         ServiceChecksum checksum = new ServiceChecksum();
