@@ -35,72 +35,72 @@ import java.util.List;
  * @since 0.2.2
  */
 public class SpringApplicationRunListener implements org.springframework.boot.SpringApplicationRunListener, Ordered {
-    
+
     private final SpringApplication application;
-    
+
     private final String[] args;
-    
+
     private List<NacosApplicationListener> nacosApplicationListeners = new ArrayList<>();
-    
+
     {
         nacosApplicationListeners.add(new LoggingApplicationListener());
         nacosApplicationListeners.add(new StartingApplicationListener());
     }
-    
+
     public SpringApplicationRunListener(SpringApplication application, String[] args) {
         this.application = application;
         this.args = args;
     }
-    
+
     @Override
     public void starting() {
         for (NacosApplicationListener nacosApplicationListener : nacosApplicationListeners) {
             nacosApplicationListener.starting();
         }
     }
-    
+
     @Override
     public void environmentPrepared(ConfigurableEnvironment environment) {
         for (NacosApplicationListener nacosApplicationListener : nacosApplicationListeners) {
             nacosApplicationListener.environmentPrepared(environment);
         }
     }
-    
+
     @Override
     public void contextPrepared(ConfigurableApplicationContext context) {
         for (NacosApplicationListener nacosApplicationListener : nacosApplicationListeners) {
             nacosApplicationListener.contextPrepared(context);
         }
     }
-    
+
     @Override
     public void contextLoaded(ConfigurableApplicationContext context) {
         for (NacosApplicationListener nacosApplicationListener : nacosApplicationListeners) {
             nacosApplicationListener.contextLoaded(context);
         }
     }
-    
+
     @Override
     public void started(ConfigurableApplicationContext context) {
         for (NacosApplicationListener nacosApplicationListener : nacosApplicationListeners) {
             nacosApplicationListener.started(context);
         }
     }
-    
+
     @Override
     public void running(ConfigurableApplicationContext context) {
         for (NacosApplicationListener nacosApplicationListener : nacosApplicationListeners) {
             nacosApplicationListener.running(context);
         }
     }
-    
+
     @Override
     public void failed(ConfigurableApplicationContext context, Throwable exception) {
         for (NacosApplicationListener nacosApplicationListener : nacosApplicationListeners) {
             nacosApplicationListener.failed(context, exception);
         }
     }
-    
+
     /**
      * Before {@link EventPublishingRunListener}.
      *

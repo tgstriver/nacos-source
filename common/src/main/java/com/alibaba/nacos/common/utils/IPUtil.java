@@ -28,35 +28,36 @@ import java.util.regex.Pattern;
  */
 @SuppressWarnings({"checkstyle:AbbreviationAsWordInName", "PMD.ClassNamingShouldBeCamelRule"})
 public class IPUtil {
-    
+
     public static final boolean PREFER_IPV6_ADDRESSES = Boolean.parseBoolean(System.getProperty("java.net.preferIPv6Addresses"));
-    
+
     public static final String IPV6_START_MARK = "[";
-    
+
     public static final String IPV6_END_MARK = "]";
-    
+
     public static final String ILLEGAL_IP_PREFIX = "illegal ip: ";
-    
+
     public static final String IP_PORT_SPLITER = ":";
-    
+
     public static final int SPLIT_IP_PORT_RESULT_LENGTH = 2;
-    
+
     public static final String PERCENT_SIGN_IN_IPV6 = "%";
-    
+
     private static final String LOCAL_HOST_IP_V4 = "127.0.0.1";
-    
+
     private static final String LOCAL_HOST_IP_V6 = "[::1]";
-    
+
     private static Pattern ipv4Pattern = Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
-    
+
     private static final int IPV4_ADDRESS_LENGTH = 4;
-    
+
     private static final int IPV6_ADDRESS_LENGTH = 16;
-    
+
     private static final String CHECK_OK = "ok";
-    
+
     /**
      * get localhost ip.
+     *
      * @return java.lang.String
      */
     public static String localHostIP() {
@@ -65,7 +66,7 @@ public class IPUtil {
         }
         return LOCAL_HOST_IP_V4;
     }
-    
+
     /**
      * check whether the ip address is IPv4.
      *
@@ -79,7 +80,7 @@ public class IPUtil {
             return false;
         }
     }
-    
+
     /**
      * check whether the ip address is IPv6.
      *
@@ -93,7 +94,7 @@ public class IPUtil {
             return false;
         }
     }
-    
+
     /**
      * check whether the str is ip address (IPv4 or IPv6).
      *
@@ -108,17 +109,18 @@ public class IPUtil {
             return false;
         }
     }
-    
+
     /**
      * Check if the address contains a port.
      * 2020/9/3 14:53
+     *
      * @param address address string
      * @return boolean
      */
     public static boolean containsPort(String address) {
         return splitIPPortStr(address).length == SPLIT_IP_PORT_RESULT_LENGTH;
     }
-    
+
     /**
      * Split IP and port strings, support IPv4 and IPv6, IP in IPv6 must be enclosed with [].
      *
@@ -146,7 +148,7 @@ public class IPUtil {
             serverAddrArr = str.split(":");
             if (serverAddrArr.length > SPLIT_IP_PORT_RESULT_LENGTH) {
                 throw new IllegalArgumentException("The IP address(\"" + str
-                        + "\") is incorrect. If it is an IPv6 address, please use [] to enclose the IP part!");
+                    + "\") is incorrect. If it is an IPv6 address, please use [] to enclose the IP part!");
             }
             if (!isIPv4(serverAddrArr[0])) {
                 throw new IllegalArgumentException("The IPv4 address(\"" + serverAddrArr[0] + "\") is incorrect.");
@@ -154,9 +156,10 @@ public class IPUtil {
         }
         return serverAddrArr;
     }
-    
+
     /**
      * Resolve the IP from the string containing the IP address.
+     *
      * @param str string containing IP address
      * @return java.lang.String
      */
@@ -181,7 +184,7 @@ public class IPUtil {
         }
         return result;
     }
-    
+
     /**
      * Check ips.
      *
@@ -189,9 +192,9 @@ public class IPUtil {
      * @return 'ok' if check passed, otherwise illegal ip
      */
     public static String checkIPs(String... ips) {
-        
+
         if (ips == null || ips.length == 0) {
-            
+
             return CHECK_OK;
         }
         // illegal response
@@ -202,21 +205,22 @@ public class IPUtil {
             }
             illegalResponse.append(ip + ",");
         }
-        
+
         if (illegalResponse.length() == 0) {
             return CHECK_OK;
         }
-        
+
         return ILLEGAL_IP_PREFIX + illegalResponse.substring(0, illegalResponse.length() - 1);
     }
-    
+
     /**
      * Check whether checkIPs result is "ok".
+     *
      * @param checkIPsResult checkIPs result
      * @return boolean
      */
     public static boolean checkOK(String checkIPsResult) {
         return CHECK_OK.equals(checkIPsResult);
     }
-    
+
 }

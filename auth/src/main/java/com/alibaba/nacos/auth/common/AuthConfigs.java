@@ -35,69 +35,69 @@ import java.util.Objects;
  */
 @Configuration
 public class AuthConfigs {
-    
+
     @JustForTest
     private static Boolean cachingEnabled = null;
-    
+
     /**
      * secret key.
      */
     @Value("${nacos.core.auth.default.token.secret.key:}")
     private String secretKey;
-    
+
     /**
      * secret key byte array.
      */
     private byte[] secretKeyBytes;
-    
+
     /**
      * Token validity time(seconds).
      */
     @Value("${nacos.core.auth.default.token.expire.seconds:18000}")
     private long tokenValidityInSeconds;
-    
+
     /**
      * Which auth system is in use.
      */
     @Value("${nacos.core.auth.system.type:}")
     private String nacosAuthSystemType;
-    
+
     @Value("${nacos.core.auth.server.identity.key:}")
     private String serverIdentityKey;
-    
+
     @Value(("${nacos.core.auth.server.identity.value:}"))
     private String serverIdentityValue;
-    
+
     @Value(("${nacos.core.auth.enable.userAgentAuthWhite:true}"))
     private boolean enableUserAgentAuthWhite;
-    
+
     public byte[] getSecretKeyBytes() {
         if (secretKeyBytes == null) {
             secretKeyBytes = Decoders.BASE64.decode(secretKey);
         }
         return secretKeyBytes;
     }
-    
+
     public long getTokenValidityInSeconds() {
         return tokenValidityInSeconds;
     }
-    
+
     public String getNacosAuthSystemType() {
         return nacosAuthSystemType;
     }
-    
+
     public String getServerIdentityKey() {
         return serverIdentityKey;
     }
-    
+
     public String getServerIdentityValue() {
         return serverIdentityValue;
     }
-    
+
     public boolean isEnableUserAgentAuthWhite() {
         return enableUserAgentAuthWhite;
     }
-    
+
     /**
      * auth function is open.
      *
@@ -110,9 +110,9 @@ public class AuthConfigs {
             return BooleanUtils.toBoolean(enabled);
         }
         return BooleanUtils
-                .toBoolean(EnvUtil.getProperty("nacos.core.auth.enabled", "false"));
+            .toBoolean(EnvUtil.getProperty("nacos.core.auth.enabled", "false"));
     }
-    
+
     /**
      * Whether permission information can be cached.
      *
@@ -123,9 +123,9 @@ public class AuthConfigs {
             return cachingEnabled;
         }
         return BooleanUtils
-                .toBoolean(EnvUtil.getProperty("nacos.core.auth.caching.enabled", "true"));
+            .toBoolean(EnvUtil.getProperty("nacos.core.auth.caching.enabled", "true"));
     }
-    
+
     @JustForTest
     public static void setCachingEnabled(boolean cachingEnabled) {
         AuthConfigs.cachingEnabled = cachingEnabled;

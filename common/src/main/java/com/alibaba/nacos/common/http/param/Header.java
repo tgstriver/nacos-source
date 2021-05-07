@@ -33,13 +33,13 @@ import java.util.Map;
  * @author <a href="mailto:liaochuntao@live.com">liaochuntao</a>
  */
 public class Header {
-    
+
     public static final Header EMPTY = Header.newInstance();
-    
+
     private final Map<String, String> header;
-    
+
     private final Map<String, List<String>> originalResponseHeader;
-    
+
     private Header() {
         header = new LinkedHashMap<String, String>();
         originalResponseHeader = new LinkedHashMap<String, List<String>>();
@@ -47,7 +47,7 @@ public class Header {
         addParam(HttpHeaderConsts.ACCEPT_CHARSET, "UTF-8");
         addParam(HttpHeaderConsts.ACCEPT_ENCODING, "gzip");
     }
-    
+
     public static Header newInstance() {
         return new Header();
     }
@@ -55,7 +55,7 @@ public class Header {
     /**
      * Add the key and value to the header.
      *
-     * @param key the key
+     * @param key   the key
      * @param value the value
      * @return header
      */
@@ -65,30 +65,30 @@ public class Header {
         }
         return this;
     }
-    
+
     public Header setContentType(String contentType) {
         if (contentType == null) {
             contentType = MediaType.APPLICATION_JSON;
         }
         return addParam(HttpHeaderConsts.CONTENT_TYPE, contentType);
     }
-    
+
     public Header build() {
         return this;
     }
-    
+
     public String getValue(String key) {
         return header.get(key);
     }
-    
+
     public Map<String, String> getHeader() {
         return header;
     }
-    
+
     public Iterator<Map.Entry<String, String>> iterator() {
         return header.entrySet().iterator();
     }
-    
+
     /**
      * Transfer to KV part list. The odd index is key and the even index is value.
      *
@@ -104,7 +104,7 @@ public class Header {
         }
         return list;
     }
-    
+
     /**
      * Add all KV list to header. The odd index is key and the even index is value.
      *
@@ -123,7 +123,7 @@ public class Header {
         }
         return this;
     }
-    
+
     /**
      * Add all parameters to header.
      *
@@ -136,7 +136,7 @@ public class Header {
             }
         }
     }
-    
+
     /**
      * set original format response header.
      *
@@ -152,7 +152,7 @@ public class Header {
             }
         }
     }
-    
+
     /**
      * get original format response header.
      *
@@ -163,7 +163,7 @@ public class Header {
     public Map<String, List<String>> getOriginalResponseHeader() {
         return this.originalResponseHeader;
     }
-    
+
     public String getCharset() {
         String acceptCharset = getValue(HttpHeaderConsts.ACCEPT_CHARSET);
         if (acceptCharset == null) {
@@ -172,7 +172,7 @@ public class Header {
         }
         return acceptCharset;
     }
-    
+
     private String analysisCharset(String contentType) {
         String[] values = contentType.split(";");
         String charset = Constants.ENCODE;
@@ -186,12 +186,12 @@ public class Header {
         }
         return charset;
     }
-    
+
     public void clear() {
         header.clear();
         originalResponseHeader.clear();
     }
-    
+
     @Override
     public String toString() {
         return "Header{" + "headerToMap=" + header + '}';

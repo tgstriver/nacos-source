@@ -27,47 +27,47 @@ import org.springframework.core.env.ConfigurableEnvironment;
  * @since 1.4.1
  */
 public interface NacosApplicationListener {
-    
+
     /**
      * {@link SpringApplicationRunListener#starting}.
      */
     void starting();
-    
+
     /**
      * {@link com.alibaba.nacos.core.code.SpringApplicationRunListener#environmentPrepared}.
      *
      * @param environment environment
      */
     void environmentPrepared(ConfigurableEnvironment environment);
-    
+
     /**
      * {@link com.alibaba.nacos.core.code.SpringApplicationRunListener#contextLoaded}.
      *
      * @param context context
      */
     void contextPrepared(ConfigurableApplicationContext context);
-    
+
     /**
      * {@link com.alibaba.nacos.core.code.SpringApplicationRunListener#contextLoaded}.
      *
      * @param context context
      */
     void contextLoaded(ConfigurableApplicationContext context);
-    
+
     /**
      * {@link com.alibaba.nacos.core.code.SpringApplicationRunListener#started}.
      *
      * @param context context
      */
     void started(ConfigurableApplicationContext context);
-    
+
     /**
      * {@link com.alibaba.nacos.core.code.SpringApplicationRunListener#running}.
      *
      * @param context context
      */
     void running(ConfigurableApplicationContext context);
-    
+
     /**
      * {@link com.alibaba.nacos.core.code.SpringApplicationRunListener#failed}.
      *

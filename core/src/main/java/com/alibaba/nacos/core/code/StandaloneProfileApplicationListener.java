@@ -37,27 +37,26 @@ import static com.alibaba.nacos.sys.env.Constants.STANDALONE_SPRING_PROFILE;
  * @see ConfigurableEnvironment#addActiveProfile(String)
  * @since 0.2.2
  */
-public class StandaloneProfileApplicationListener
-        implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, PriorityOrdered {
-    
+public class StandaloneProfileApplicationListener implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, PriorityOrdered {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(StandaloneProfileApplicationListener.class);
-    
+
     @Override
     public void onApplicationEvent(ApplicationEnvironmentPreparedEvent event) {
-        
+
         ConfigurableEnvironment environment = event.getEnvironment();
 
         if (environment.getProperty(STANDALONE_MODE_PROPERTY_NAME, boolean.class, false)) {
             environment.addActiveProfile(STANDALONE_SPRING_PROFILE);
         }
-        
+
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Spring Environment's active profiles : {} in standalone mode : {}",
-                    Arrays.asList(environment.getActiveProfiles()), EnvUtil.getStandaloneMode());
+                Arrays.asList(environment.getActiveProfiles()), EnvUtil.getStandaloneMode());
         }
-        
+
     }
-    
+
     @Override
     public int getOrder() {
         return HIGHEST_PRECEDENCE;

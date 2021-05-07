@@ -36,137 +36,141 @@ import com.alibaba.nacos.naming.misc.UtilsAndCommons;
 import com.alibaba.nacos.naming.push.PushService;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 /**
- * Check and update statues of ephemeral instances, remove them if they have been expired.
- *
- * @author nkorange
+ * 检查并更新临时实例的状态，如果它们已经过期，则将其删除
  */
 public class ClientBeatCheckTask implements Runnable {
-    
+
     private Service service;
-    
+
     public ClientBeatCheckTask(Service service) {
         this.service = service;
     }
-    
+
     @JsonIgnore
     public PushService getPushService() {
         return ApplicationUtils.getBean(PushService.class);
     }
-    
+
     @JsonIgnore
     public DistroMapper getDistroMapper() {
         return ApplicationUtils.getBean(DistroMapper.class);
     }
-    
+
     public GlobalConfig getGlobalConfig() {
         return ApplicationUtils.getBean(GlobalConfig.class);
     }
-    
+
     public SwitchDomain getSwitchDomain() {
         return ApplicationUtils.getBean(SwitchDomain.class);
     }
-    
+
     public String taskKey() {
         return KeyBuilder.buildServiceMetaKey(service.getNamespaceId(), service.getName());
     }
-    
+
     @Override
     public void run() {
         try {
             if (!getDistroMapper().responsible(service.getName())) {
                 return;
             }
-            
+
             if (!getSwitchDomain().isHealthCheckEnabled()) {
                 return;
             }
-            
+
             List<Instance> instances = service.allIPs(true);
-            
-            // first set health status of instances:
+
+            // 首先设置实例的健康状况
             for (Instance instance : instances) {
+                // 如果当前时间和实例最后一次发送心跳的时间的差值大于了设置的PreservedMetadataKeys.HEART_BEAT_TIMEOUT时间(默认15秒)
+                // 那么将该实例设置为非健康状态，同时发布InstanceHeartbeatTimeoutEvent和ServiceChangeEvent事件
                 if (System.currentTimeMillis() - instance.getLastBeat() > instance.getInstanceHeartBeatTimeOut()) {
                     if (!instance.isMarked()) {
                         if (instance.isHealthy()) {
                             instance.setHealthy(false);
                             Loggers.EVT_LOG
-                                    .info("{POS} {IP-DISABLED} valid: {}:{}@{}@{}, region: {}, msg: client timeout after {}, last beat: {}",
-                                            instance.getIp(), instance.getPort(), instance.getClusterName(),
-                                            service.getName(), UtilsAndCommons.LOCALHOST_SITE,
-                                            instance.getInstanceHeartBeatTimeOut(), instance.getLastBeat());
-                            getPushService().serviceChanged(service);
+                                .info("{POS} {IP-DISABLED} valid: {}:{}@{}@{}, region: {}, msg: client timeout after {}, last beat: {}",
+                                    instance.getIp(), instance.getPort(), instance.getClusterName(),
+                                    service.getName(), UtilsAndCommons.LOCALHOST_SITE,
+                                    instance.getInstanceHeartBeatTimeOut(), instance.getLastBeat());
+                            // 发布ServiceChangeEvent事件，该事件的监听器是PushService
+                            this.getPushService().serviceChanged(service);
+                            // 发布InstanceHeartbeatTimeoutEvent事件
                             ApplicationUtils.publishEvent(new InstanceHeartbeatTimeoutEvent(this, instance));
                         }
                     }
                 }
             }
-            
+
             if (!getGlobalConfig().isExpireInstance()) {
                 return;
             }
-            
-            // then remove obsolete instances:
+
+            // 然后删除过时的实例
             for (Instance instance : instances) {
-                
                 if (instance.isMarked()) {
                     continue;
                 }
-                
+
+                // 如果当前时间和实例最后一次发送心跳的时间的差值大于了设置的PreservedMetadataKeys.IP_DELETE_TIMEOUT时间(默认30秒)，那么删除该实例
                 if (System.currentTimeMillis() - instance.getLastBeat() > instance.getIpDeleteTimeout()) {
                     // delete instance
-                    Loggers.SRV_LOG.info("[AUTO-DELETE-IP] service: {}, ip: {}", service.getName(),
-                            JacksonUtils.toJson(instance));
+                    Loggers.SRV_LOG.info("[AUTO-DELETE-IP] service: {}, ip: {}", service.getName(), JacksonUtils.toJson(instance));
                     deleteIp(instance);
                 }
             }
-            
         } catch (Exception e) {
             Loggers.SRV_LOG.warn("Exception while processing client beat time out.", e);
         }
-        
     }
-    
+
+    /**
+     * 删除实例，调用的接口为{@link com.alibaba.nacos.naming.controllers.InstanceController#deregister(HttpServletRequest)}
+     *
+     * @param instance
+     */
     private void deleteIp(Instance instance) {
-        
         try {
             NamingProxy.Request request = NamingProxy.Request.newRequest();
             request.appendParam("ip", instance.getIp()).appendParam("port", String.valueOf(instance.getPort()))
-                    .appendParam("ephemeral", "true").appendParam("clusterName", instance.getClusterName())
-                    .appendParam("serviceName", service.getName()).appendParam("namespaceId", service.getNamespaceId());
-            
+                .appendParam("ephemeral", "true").appendParam("clusterName", instance.getClusterName())
+                .appendParam("serviceName", service.getName()).appendParam("namespaceId", service.getNamespaceId());
+
             String url = "http://" + IPUtil.localHostIP() + IPUtil.IP_PORT_SPLITER + EnvUtil.getPort() + EnvUtil.getContextPath()
-                    + UtilsAndCommons.NACOS_NAMING_CONTEXT + "/instance?" + request.toUrl();
-            
-            // delete instance asynchronously:
+                + UtilsAndCommons.NACOS_NAMING_CONTEXT + "/instance?" + request.toUrl();
+
+            // 异步删除实例
             HttpClient.asyncHttpDelete(url, null, null, new Callback<String>() {
                 @Override
                 public void onReceive(RestResult<String> result) {
                     if (!result.ok()) {
                         Loggers.SRV_LOG
-                                .error("[IP-DEAD] failed to delete ip automatically, ip: {}, caused {}, resp code: {}",
-                                        instance.toJson(), result.getMessage(), result.getCode());
+                            .error("[IP-DEAD] failed to delete ip automatically, ip: {}, caused {}, resp code: {}",
+                                instance.toJson(), result.getMessage(), result.getCode());
                     }
                 }
-    
+
                 @Override
                 public void onError(Throwable throwable) {
                     Loggers.SRV_LOG
-                            .error("[IP-DEAD] failed to delete ip automatically, ip: {}, error: {}", instance.toJson(),
-                                    throwable);
+                        .error("[IP-DEAD] failed to delete ip automatically, ip: {}, error: {}", instance.toJson(),
+                            throwable);
                 }
-    
+
                 @Override
                 public void onCancel() {
-        
+
                 }
             });
-            
+
         } catch (Exception e) {
             Loggers.SRV_LOG
-                    .error("[IP-DEAD] failed to delete ip automatically, ip: {}, error: {}", instance.toJson(), e);
+                .error("[IP-DEAD] failed to delete ip automatically, ip: {}, error: {}", instance.toJson(), e);
         }
     }
 }
