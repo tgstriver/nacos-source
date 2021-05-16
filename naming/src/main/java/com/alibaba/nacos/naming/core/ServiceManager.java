@@ -659,7 +659,7 @@ public class ServiceManager implements RecordListener<Service> {
     }
 
     /**
-     * Remove instance from service.
+     * 从服务中移除实例
      *
      * @param namespaceId namespace
      * @param serviceName service name
@@ -669,9 +669,7 @@ public class ServiceManager implements RecordListener<Service> {
      */
     public void removeInstance(String namespaceId, String serviceName, boolean ephemeral, Instance... ips) throws NacosException {
         Service service = getService(namespaceId, serviceName);
-        synchronized (service) {
-            removeInstance(namespaceId, serviceName, ephemeral, service, ips);
-        }
+        removeInstance(namespaceId, serviceName, ephemeral, service, ips);
     }
 
     private void removeInstance(String namespaceId, String serviceName, boolean ephemeral, Service service,

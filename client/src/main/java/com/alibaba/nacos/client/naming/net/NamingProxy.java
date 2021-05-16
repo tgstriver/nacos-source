@@ -159,7 +159,7 @@ public class NamingProxy implements Closeable {
     }
 
     /**
-     * 从nacos服务端获取所有的服务列表
+     * 获取所有的地址列表
      *
      * @return
      */
@@ -197,23 +197,23 @@ public class NamingProxy implements Closeable {
                 return;
             }
 
-            // 如果任务执行的时间与最近一次获取服务列表的时间差值在vipSrvRefInterMillis（30秒）内，则直接返回
+            // 如果任务执行的时间与最近一次获取nacos server地址列表的时间差值在vipSrvRefInterMillis(30秒)内，则直接返回
             if (System.currentTimeMillis() - lastSrvRefTime < vipSrvRefInterMillis) {
                 return;
             }
 
-            List<String> list = getServerListFromEndpoint(); // 从nacos服务端获取服务列表
+            List<String> list = getServerListFromEndpoint(); // 获取所有的地址列表
 
             if (CollectionUtils.isEmpty(list)) {
                 throw new Exception("Can not acquire Nacos list");
             }
 
-            if (!CollectionUtils.isEqualCollection(list, serversFromEndpoint)) { // nacos服务端中存储的服务列表发生了变化
+            if (!CollectionUtils.isEqualCollection(list, serversFromEndpoint)) { // nacos server地址列表发生了变化
                 NAMING_LOGGER.info("[SERVER-LIST] server list is updated: " + list);
             }
 
-            serversFromEndpoint = list; // 将最新的服务列表进行缓存
-            lastSrvRefTime = System.currentTimeMillis(); // 修改最近一次从nacos服务端获取服务列表的时间
+            serversFromEndpoint = list; // 将最新的地址列表进行缓存
+            lastSrvRefTime = System.currentTimeMillis(); // 修改最近一次获取地址列表的时间
         } catch (Throwable e) {
             NAMING_LOGGER.warn("failed to update server list", e);
         }
