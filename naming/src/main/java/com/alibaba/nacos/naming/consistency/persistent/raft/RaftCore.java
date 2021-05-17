@@ -478,21 +478,24 @@ public class RaftCore implements Closeable {
                 if (stopWork) {
                     return;
                 }
+
                 if (!peers.isReady()) {
                     return;
                 }
 
                 RaftPeer local = peers.local();
+                // 每执行一次任务就减一次任务执行的时间间隔，直到减到小于等于0就可以开始投票
                 local.leaderDueMs -= GlobalExecutor.TICK_PERIOD_MS;
 
                 if (local.leaderDueMs > 0) {
                     return;
                 }
 
-                // reset timeout
+                // 重置选举时间
                 local.resetLeaderDue();
+                // 重置心跳时间
                 local.resetHeartbeatDue();
-
+                // 发起集群leader投票
                 sendVote();
             } catch (Exception e) {
                 Loggers.RAFT.warn("[RAFT] error while master election {}", e);
@@ -501,19 +504,17 @@ public class RaftCore implements Closeable {
         }
 
         private void sendVote() {
-
             RaftPeer local = peers.get(NetUtils.localServer());
-            Loggers.RAFT.info("leader timeout, start voting,leader: {}, term: {}", JacksonUtils.toJson(getLeader()),
-                local.term);
+            Loggers.RAFT.info("leader timeout, start voting,leader: {}, term: {}", JacksonUtils.toJson(getLeader()), local.term);
 
-            peers.reset();
-
-            local.term.incrementAndGet();
-            local.voteFor = local.ip;
-            local.state = RaftPeer.State.CANDIDATE;
+            peers.reset(); // 重置集群节点投票
+            local.term.incrementAndGet(); // 选举周期加1
+            local.voteFor = local.ip; // 投票给自己
+            local.state = RaftPeer.State.CANDIDATE; // 修改自己状态为leader的候选者
 
             Map<String, String> params = new HashMap<>(1);
             params.put("vote", JacksonUtils.toJson(local));
+
             for (final String server : peers.allServersWithoutMySelf()) {
                 final String url = buildUrl(server, API_VOTE);
                 try {
@@ -530,7 +531,6 @@ public class RaftCore implements Closeable {
                             Loggers.RAFT.info("received approve from peer: {}", JacksonUtils.toJson(peer));
 
                             peers.decideLeader(peer);
-
                         }
 
                         @Override
@@ -551,7 +551,7 @@ public class RaftCore implements Closeable {
     }
 
     /**
-     * Received vote.
+     * 接收远程候选节点的投票
      *
      * @param remote remote raft peer of vote information
      * @return self-peer information
@@ -560,11 +560,14 @@ public class RaftCore implements Closeable {
         if (stopWork) {
             throw new IllegalStateException("old raft protocol already stop work");
         }
+
         if (!peers.contains(remote)) {
             throw new IllegalStateException("can not find peer: " + remote.ip);
         }
 
         RaftPeer local = peers.get(NetUtils.localServer());
+        // 如果收到的候选节点term小于等于本地节点term，则将本地节点的voteFor更新为自己
+        // 意思是我自己更适合做leader，这一票我投给自己
         if (remote.term.get() <= local.term.get()) {
             String msg = "received illegitimate vote" + ", voter-term:" + remote.term + ", votee-term:" + local.term;
 
@@ -576,15 +579,14 @@ public class RaftCore implements Closeable {
             return local;
         }
 
-        local.resetLeaderDue();
-
+        local.resetLeaderDue(); // 重置这个FOLLOWER的election timeout
         local.state = RaftPeer.State.FOLLOWER;
-        local.voteFor = remote.ip;
-        local.term.set(remote.term.get());
+        local.voteFor = remote.ip; // 更新它的voteFor为收到的候选节点的ip(意思是就按你说的做，这一票就投给你了)
+        local.term.set(remote.term.get()); // 更新它的term为收到的候选节点的term
 
         Loggers.RAFT.info("vote {} as leader, term: {}", remote.ip, remote.term);
 
-        return local;
+        return local; // 将本地节点作为http响应返回
     }
 
     public class HeartBeat implements Runnable {
@@ -601,13 +603,15 @@ public class RaftCore implements Closeable {
                 }
 
                 RaftPeer local = peers.local();
+                // 每执行一次任务就减一次任务执行的时间间隔，直到减到小于等于0就开始向其他节点发送心跳
                 local.heartbeatDueMs -= GlobalExecutor.TICK_PERIOD_MS;
                 if (local.heartbeatDueMs > 0) {
                     return;
                 }
 
+                // 重置心跳到期时间
                 local.resetHeartbeatDue();
-
+                // LEADER节点每隔5秒就向其他FOLLOWER节点发送心跳
                 sendBeat();
             } catch (Exception e) {
                 Loggers.RAFT.warn("[RAFT] error while sending beat {}", e);
@@ -617,7 +621,8 @@ public class RaftCore implements Closeable {
 
         private void sendBeat() throws IOException, InterruptedException {
             RaftPeer local = peers.local();
-            if (EnvUtil.getStandaloneMode() || local.state != RaftPeer.State.LEADER) { // 只有leader才能发送心跳
+            // 只有leader才能发送心跳
+            if (EnvUtil.getStandaloneMode() || local.state != RaftPeer.State.LEADER) {
                 return;
             }
 
@@ -638,8 +643,8 @@ public class RaftCore implements Closeable {
             }
 
             if (!switchDomain.isSendBeatOnly()) {
+                // 将key和对应的版本放入element中，最终添加到array里
                 for (Datum datum : datums.values()) {
-
                     ObjectNode element = JacksonUtils.createEmptyJsonNode();
 
                     if (KeyBuilder.matchServiceMetaKey(datum.key)) {
@@ -655,7 +660,7 @@ public class RaftCore implements Closeable {
 
             packet.replace("datums", array);
             // broadcast
-            Map<String, String> params = new HashMap<String, String>(1);
+            Map<String, String> params = new HashMap<>(1);
             params.put("beat", JacksonUtils.toJson(packet));
 
             String content = JacksonUtils.toJson(params);
@@ -679,6 +684,8 @@ public class RaftCore implements Closeable {
                     if (Loggers.RAFT.isDebugEnabled()) {
                         Loggers.RAFT.debug("send beat to server " + server);
                     }
+
+                    // 将压缩后的数据包发给所有的follower节点
                     HttpClient.asyncHttpPostLarge(url, null, compressedBytes, new Callback<String>() {
                         @Override
                         public void onReceive(RestResult<String> result) {
@@ -726,6 +733,7 @@ public class RaftCore implements Closeable {
         if (stopWork) {
             throw new IllegalStateException("old raft protocol already stop work");
         }
+
         final RaftPeer local = peers.local();
         final RaftPeer remote = new RaftPeer();
         JsonNode peer = beat.get("peer");
@@ -751,7 +759,6 @@ public class RaftCore implements Closeable {
         }
 
         if (local.state != RaftPeer.State.FOLLOWER) {
-
             Loggers.RAFT.info("[RAFT] make remote as leader, remote peer: {}", JacksonUtils.toJson(remote));
             // mk follower
             local.state = RaftPeer.State.FOLLOWER;
@@ -759,6 +766,7 @@ public class RaftCore implements Closeable {
         }
 
         final JsonNode beatDatums = beat.get("datums");
+        // 重置选举时间和心跳时间
         local.resetLeaderDue();
         local.resetHeartbeatDue();
 
@@ -768,7 +776,7 @@ public class RaftCore implements Closeable {
 
             Map<String, Integer> receivedKeysMap = new HashMap<>(datums.size());
 
-            for (Map.Entry<String, Datum> entry : datums.entrySet()) {
+            for (Map.Entry<String, Datum> entry : datums.entrySet()) { // 将当前节点的key存放到一个map中，value都为0
                 receivedKeysMap.put(entry.getKey(), 0);
             }
 
@@ -781,6 +789,7 @@ public class RaftCore implements Closeable {
                     .debug("[RAFT] received beat with {} keys, RaftCore.datums' size is {}, remote server: {}, term: {}, local term: {}",
                         beatDatums.size(), datums.size(), remote.ip, remote.term, local.term);
             }
+
             for (Object object : beatDatums) {
                 processedCount = processedCount + 1;
 

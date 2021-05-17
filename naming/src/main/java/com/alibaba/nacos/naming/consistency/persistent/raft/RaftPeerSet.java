@@ -65,6 +65,9 @@ public class RaftPeerSet extends MemberChangeListener implements Closeable {
 
     private RaftPeer leader = null;
 
+    /**
+     * Map<ip地址, RaftPeer>
+     */
     private volatile Map<String, RaftPeer> peers = new HashMap<>(8);
 
     private Set<String> sites = new HashSet<>();
@@ -159,7 +162,7 @@ public class RaftPeerSet extends MemberChangeListener implements Closeable {
      * @return all servers excludes current peer
      */
     public Set<String> allServersWithoutMySelf() {
-        Set<String> servers = new HashSet<String>(peers.keySet());
+        Set<String> servers = new HashSet<>(peers.keySet());
 
         // exclude myself
         servers.remove(local().ip);
@@ -187,6 +190,7 @@ public class RaftPeerSet extends MemberChangeListener implements Closeable {
         SortedBag ips = new TreeBag();
         int maxApproveCount = 0;
         String maxApprovePeer = null;
+        // 1、遍历所有的节点，若voteFor不为空，则将节点的voteFor添加到ips中，记录被选举次数最多的节点和次数
         for (RaftPeer peer : peers.values()) {
             if (StringUtils.isEmpty(peer.voteFor)) {
                 continue;
@@ -199,6 +203,7 @@ public class RaftPeerSet extends MemberChangeListener implements Closeable {
             }
         }
 
+        // 2、将选举出来的节点设置为leader
         if (maxApproveCount >= majorityCount()) {
             RaftPeer peer = peers.get(maxApprovePeer);
             peer.state = RaftPeer.State.LEADER;
@@ -214,7 +219,8 @@ public class RaftPeerSet extends MemberChangeListener implements Closeable {
     }
 
     /**
-     * Set leader as new candidate.
+     * 更新leader信息，将remote设置为新的leader，更新原有leader的节点信息
+     * (leader节点会通过心跳通知其他节点更新leader)
      *
      * @param candidate new candidate
      * @return new leader
@@ -307,9 +313,7 @@ public class RaftPeerSet extends MemberChangeListener implements Closeable {
      * Reset set.
      */
     public void reset() {
-
         leader = null;
-
         for (RaftPeer peer : peers.values()) {
             peer.voteFor = null;
         }
