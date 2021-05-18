@@ -808,18 +808,21 @@ public class RaftCore implements Closeable {
 
                 long timestamp = entry.get("timestamp").asLong();
 
-                receivedKeysMap.put(datumKey, 1);
+                receivedKeysMap.put(datumKey, 1); // 将收到的key在本地key的map中标记为1
 
                 try {
+                    // 收到的key在本地存在并且本地的版本大于等于收到的版本，并且还有数据未处理完，则直接continue
                     if (datums.containsKey(datumKey) && datums.get(datumKey).timestamp.get() >= timestamp
                         && processedCount < beatDatums.size()) {
                         continue;
                     }
 
+                    // 若收到的key在本地没有，或者本地的版本小于收到的版本，则放入批量处理batch中
                     if (!(datums.containsKey(datumKey) && datums.get(datumKey).timestamp.get() >= timestamp)) {
                         batch.add(datumKey);
                     }
 
+                    // 只有batch的数量超过50或接收的数据已经处理完了，才进行获取数据操作
                     if (batch.size() < 50 && processedCount < beatDatums.size()) {
                         continue;
                     }
@@ -838,6 +841,7 @@ public class RaftCore implements Closeable {
                     String url = buildUrl(remote.ip, API_GET);
                     Map<String, String> queryParam = new HashMap<>(1);
                     queryParam.put("keys", URLEncoder.encode(keys, "UTF-8"));
+                    // 批量从leader节点获取keys对应的数据更新到本地，这一步保证了集群节点之间的数据最终一致性
                     HttpClient.asyncHttpGet(url, null, queryParam, new Callback<String>() {
                         @Override
                         public void onReceive(RestResult<String> result) {
@@ -952,6 +956,7 @@ public class RaftCore implements Closeable {
 
             for (String deadKey : deadKeys) {
                 try {
+                    // 若某个key在本地存在但收到的key列表中没有，则证明leader已经删除，那么本地也要删除
                     deleteDatum(deadKey);
                 } catch (Exception e) {
                     Loggers.RAFT.error("[NACOS-RAFT] failed to remove entry, key={} {}", deadKey, e);
